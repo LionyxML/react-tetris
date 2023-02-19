@@ -12,6 +12,11 @@
   gap: 1rem;
 }
 
+.app-main {
+  display: flex;
+  gap: 1rem;
+}
+
 .logo {
   height: 1em;
   will-change: filter;

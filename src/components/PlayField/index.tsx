@@ -6,14 +6,13 @@ interface IPlayField {
 }
 
 export const PlayField: React.FC<IPlayField> = ({ data }) => {
-  console.log('data', { data });
   return (
     <div className="container">
-      {data.map((row) => (
-        <div className="row">
-          {row.map((col) => (
-            <div className="col">
-              <div className="cell">{col.isEmpty ? '' : '#'}</div>
+      {data.map((row, i) => (
+        <div className="row" key={i}>
+          {row.map((col, j) => (
+            <div className="col" key={j}>
+              <div className="cell" style={{ backgroundColor: col.color }} />
             </div>
           ))}
         </div>

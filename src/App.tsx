@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import reactLogo from './assets/react.svg';
 import './App.css';
 import { PlayField } from './components/PlayField';
+import { clone, toLower } from 'ramda';
 
 type Cell = {
   isEmpty: boolean;
@@ -11,6 +12,10 @@ type Field = Cell[][];
 type Tetromino = {
   color: string;
   state: number[][];
+};
+type TetrominoPosition = {
+  x: number;
+  y: number;
 };
 
 const emptyCell: Cell = { isEmpty: true, color: 'inherit' };
@@ -60,81 +65,88 @@ const Z: Tetromino = {
   ],
 };
 
-const tetrominoes = { I, J, L, O, S, T, Z };
+const tetrominoes = [I, J, L, O, S, T, Z];
 
-const printTetrominoOverField = (tetromino: Tetromino, field: Field): Field => {
-  const xPos = 1;
-  const yPos = 5;
+const printTetrominoOverField = (tetromino: Tetromino, field: Field, position: TetrominoPosition): Field => {
+  const { x: xPos, y: yPos } = position;
+  const newField = clone(field);
 
-  // TODO: CONTINUE FROM HERE
+  for (let y = yPos; y <= yPos + tetromino.state.length - 1; y++) {
+    for (let x = xPos; x <= xPos + tetromino.state[0].length - 1; x++) {
+      const tetrominoX = x - xPos;
+      const tetrominoY = y - yPos;
+      const isCoordValid = tetrominoX >= 0 && tetrominoY >= 0;
 
-  return field.map((_y, y) =>
-    _y.map((_x, x) => {
-      if (x === xPos && y === yPos && tetromino.state[y - yPos][x - xPos] === 1) {
-        return { isEmpty: false, color: 'red' };
+      if (isCoordValid && tetromino.state[tetrominoY][tetrominoX] === 1) {
+        newField[y][x] = {
+          isEmpty: false,
+          color: tetromino.color,
+        };
       }
-      if (x === xPos + 1 && y === yPos && tetromino.state[y - yPos][x - xPos - 1] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 2 && y === yPos && tetromino.state[y - yPos][x - xPos - 2] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 3 && y === yPos && tetromino.state[y - yPos][x - xPos - 3] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
+    }
+  }
 
-      if (x === xPos && y === yPos + 1 && tetromino.state[y - yPos - 1][x - xPos] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 1 && y === yPos + 1 && tetromino.state[y - yPos - 1][x - xPos - 1] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 2 && y === yPos + 1 && tetromino.state[y - yPos - 1][x - xPos - 2] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 3 && y === yPos + 1 && tetromino.state[y - yPos - 1][x - xPos - 3] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-
-      if (x === xPos && y === yPos + 2 && tetromino.state[y - yPos - 2][x - xPos] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 1 && y === yPos + 2 && tetromino.state[y - yPos - 2][x - xPos - 1] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 2 && y === yPos + 2 && tetromino.state[y - yPos - 2][x - xPos - 2] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 3 && y === yPos + 2 && tetromino.state[y - yPos - 2][x - xPos - 3] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-
-      if (x === xPos && y === yPos + 3 && tetromino.state[y - yPos - 3][x - xPos] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 1 && y === yPos + 3 && tetromino.state[y - yPos - 3][x - xPos - 1] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 2 && y === yPos + 3 && tetromino.state[y - yPos - 3][x - xPos - 2] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-      if (x === xPos + 3 && y === yPos + 3 && tetromino.state[y - yPos - 3][x - xPos - 3] === 1) {
-        return { isEmpty: false, color: 'red' };
-      }
-
-      return { isEmpty: true, color: 'inherit' };
-
-      // return xPos === x && yPos === y ? { isEmpty: false, color: 'red' } : { isEmpty: true, color: 'inherit' };
-    }),
-  );
+  return newField;
 };
 
 const App: React.FC = () => {
-  const [field, setField] = useState(emptyField);
+  const [field] = useState(emptyField);
+  const [fieldToPrint, setFieldToPrint] = useState(field);
+  const [tetrominoPosition, setTetrominoPosition] = useState({ y: 0, x: 0 });
+  const [currentTetrominoIndex, setCurrentTetrominoIndex] = useState(0);
+  const [currentTetromino, setCurrentTetromino] = useState(tetrominoes[currentTetrominoIndex]);
 
-  const currentTetromino = tetrominoes.I;
+  const updateField = () => setFieldToPrint(printTetrominoOverField(currentTetromino, field, tetrominoPosition));
+  const moveRight = () =>
+    setTetrominoPosition((pos) => ({
+      x: pos.x + currentTetromino.state[0].length < field[pos.y].length ? pos.x + 1 : pos.x,
+      y: pos.y,
+    }));
+  const moveLeft = () => setTetrominoPosition((pos) => ({ x: pos.x > 0 ? pos.x - 1 : pos.x, y: pos.y }));
+  const moveDown = () =>
+    setTetrominoPosition((pos) => ({
+      x: pos.x,
+      y: pos.y + currentTetromino.state.length < field.length ? pos.y + 1 : pos.y,
+    }));
+  const moveUp = () => setTetrominoPosition((pos) => ({ x: pos.x, y: pos.y > 0 ? pos.y - 1 : pos.y }));
 
-  const handleClick = () => setField(printTetrominoOverField(currentTetromino, field));
+  const nextTetromino = () => setCurrentTetrominoIndex((index) => (index < tetrominoes.length - 1 ? index + 1 : index));
+  const prevTetromino = () => setCurrentTetrominoIndex((index) => (index > 0 ? index - 1 : index));
+
+  const handleKeyPress = useCallback((event: KeyboardEvent) => {
+    switch (toLower(event.key)) {
+      case 'a':
+      case 'arrowleft':
+        moveLeft();
+        break;
+      case 'd':
+      case 'arrowright':
+        moveRight();
+        break;
+      case 'w':
+      case 'arrowup':
+        moveUp();
+        break;
+      case 's':
+      case 'arrowdown':
+        moveDown();
+        break;
+
+      default:
+        return;
+    }
+  }, []);
+
+  useEffect(() => updateField(), [tetrominoPosition, currentTetromino]);
+
+  useEffect(() => setCurrentTetromino(tetrominoes[currentTetrominoIndex]), [currentTetrominoIndex]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyPress);
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [handleKeyPress]);
 
   return (
     <div className="App">
@@ -143,9 +155,20 @@ const App: React.FC = () => {
           <img src={reactLogo} className="logo react" alt="React logo" />
           Tetris
         </h1>
-        <button onClick={handleClick}>+</button>
       </div>
-      <PlayField data={field} />
+      <div className="app-main">
+        <PlayField data={fieldToPrint} />
+        <div>
+          <p>Debug Controls:</p>
+          <button onClick={updateField}>R</button>
+          <button onClick={moveRight}>{'>'}</button>
+          <button onClick={moveLeft}>{'<'}</button>
+          <button onClick={moveUp}>{'^'}</button>
+          <button onClick={moveDown}>{'v'}</button>
+          <button onClick={prevTetromino}>{'Prev.'}</button>
+          <button onClick={nextTetromino}>{'Next.'}</button>
+        </div>
+      </div>
     </div>
   );
 };
