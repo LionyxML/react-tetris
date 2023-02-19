@@ -5,9 +5,15 @@
   text-align: center;
 }
 
+.app-title {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+}
+
 .logo {
-  height: 6em;
-  padding: 1.5em;
+  height: 1em;
   will-change: filter;
   transition: filter 300ms;
 }
