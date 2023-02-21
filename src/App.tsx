@@ -118,47 +118,50 @@ const App: React.FC = () => {
 
   const rotateTetromino = () => setCurrentTetromino((tetromino) => rotateTetrominoState(tetromino));
 
-  const handleKeyPress = useCallback((event: KeyboardEvent) => {
-    switch (toLower(event.key)) {
-      case 'a':
-      case 'arrowleft':
-        moveLeft();
-        break;
-      case 'd':
-      case 'arrowright':
-        moveRight();
-        break;
-      case 'w':
-      case 'arrowup':
-        moveUp();
-        break;
-      case 's':
-      case 'arrowdown':
-        moveDown();
-        break;
-      case 'r':
-        rotateTetromino();
-        break;
-      case 'p':
-        prevTetromino();
-        break;
-      case 'n':
-        nextTetromino();
-        break;
+  const handleKeyPress = useCallback(
+    (event: KeyboardEvent) => {
+      switch (toLower(event.key)) {
+        case 'a':
+        case 'arrowleft':
+          moveLeft();
+          break;
+        case 'd':
+        case 'arrowright':
+          moveRight();
+          break;
+        case 'w':
+        case 'arrowup':
+          moveUp();
+          break;
+        case 's':
+        case 'arrowdown':
+          moveDown();
+          break;
+        case 'r':
+          rotateTetromino();
+          break;
+        case 'p':
+          prevTetromino();
+          break;
+        case 'n':
+          nextTetromino();
+          break;
 
-      default:
-        return;
-    }
-  }, []);
+        default:
+          return;
+      }
+    },
+    [currentTetromino],
+  );
 
   useEffect(() => updateField(), [tetrominoPosition, currentTetromino, handleKeyPress]);
 
   useEffect(() => setCurrentTetromino(tetrominoes[currentTetrominoIndex]), [currentTetrominoIndex]);
 
   useEffect(() => {
-    document.addEventListener('keydown', handleKeyPress);
+    document.addEventListener('keydown', handleKeyPress, false);
     return () => {
-      document.removeEventListener('keydown', handleKeyPress);
+      document.removeEventListener('keydown', handleKeyPress, false);
     };
   }, [handleKeyPress]);
 
