@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import reactLogo from './assets/react.svg';
 import './App.css';
 import { PlayField } from './components/PlayField';
-import { clone, toLower } from 'ramda';
+import { clone, reverse, toLower, transpose } from 'ramda';
 
 type Cell = {
   isEmpty: boolean;
@@ -89,6 +89,8 @@ const printTetrominoOverField = (tetromino: Tetromino, field: Field, position: T
   return newField;
 };
 
+const rotateTetrominoState = (tetromino: Tetromino) => ({ ...tetromino, state: transpose(reverse(tetromino.state)) });
+
 const App: React.FC = () => {
   const [field] = useState(emptyField);
   const [fieldToPrint, setFieldToPrint] = useState(field);
@@ -97,9 +99,10 @@ const App: React.FC = () => {
   const [currentTetromino, setCurrentTetromino] = useState(tetrominoes[currentTetrominoIndex]);
 
   const updateField = () => setFieldToPrint(printTetrominoOverField(currentTetromino, field, tetrominoPosition));
+
   const moveRight = () =>
     setTetrominoPosition((pos) => ({
-      x: pos.x + currentTetromino.state[0].length < field[pos.y].length ? pos.x + 1 : pos.x,
+      x: pos.x + currentTetromino.state[0].length <= field[0].length - 1 ? pos.x + 1 : pos.x,
       y: pos.y,
     }));
   const moveLeft = () => setTetrominoPosition((pos) => ({ x: pos.x > 0 ? pos.x - 1 : pos.x, y: pos.y }));
@@ -112,6 +115,8 @@ const App: React.FC = () => {
 
   const nextTetromino = () => setCurrentTetrominoIndex((index) => (index < tetrominoes.length - 1 ? index + 1 : index));
   const prevTetromino = () => setCurrentTetrominoIndex((index) => (index > 0 ? index - 1 : index));
+
+  const rotateTetromino = () => setCurrentTetromino((tetromino) => rotateTetrominoState(tetromino));
 
   const handleKeyPress = useCallback((event: KeyboardEvent) => {
     switch (toLower(event.key)) {
@@ -131,13 +136,22 @@ const App: React.FC = () => {
       case 'arrowdown':
         moveDown();
         break;
+      case 'r':
+        rotateTetromino();
+        break;
+      case 'p':
+        prevTetromino();
+        break;
+      case 'n':
+        nextTetromino();
+        break;
 
       default:
         return;
     }
   }, []);
 
-  useEffect(() => updateField(), [tetrominoPosition, currentTetromino]);
+  useEffect(() => updateField(), [tetrominoPosition, currentTetromino, handleKeyPress]);
 
   useEffect(() => setCurrentTetromino(tetrominoes[currentTetrominoIndex]), [currentTetrominoIndex]);
 
@@ -167,6 +181,7 @@ const App: React.FC = () => {
           <button onClick={moveDown}>{'v'}</button>
           <button onClick={prevTetromino}>{'Prev.'}</button>
           <button onClick={nextTetromino}>{'Next.'}</button>
+          <button onClick={rotateTetromino}>{'Rot'}</button>
         </div>
       </div>
     </div>
