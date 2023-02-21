@@ -89,14 +89,20 @@ const printTetrominoOverField = (tetromino: Tetromino, field: Field, position: T
   return newField;
 };
 
+// TODO: implement the actual algorithm here
+const getNextTetromino = (): number => Math.floor(Math.random() * 7);
+
 const rotateTetrominoState = (tetromino: Tetromino) => ({ ...tetromino, state: transpose(reverse(tetromino.state)) });
+
+const getStartingPosition = (tetromino: Tetromino, field: Field): number =>
+  Math.floor((field[0].length - tetromino.state[0].length) / 2);
 
 const App: React.FC = () => {
   const [field] = useState(emptyField);
   const [fieldToPrint, setFieldToPrint] = useState(field);
-  const [tetrominoPosition, setTetrominoPosition] = useState({ y: 0, x: 0 });
-  const [currentTetrominoIndex, setCurrentTetrominoIndex] = useState(0);
+  const [currentTetrominoIndex, setCurrentTetrominoIndex] = useState(getNextTetromino);
   const [currentTetromino, setCurrentTetromino] = useState(tetrominoes[currentTetrominoIndex]);
+  const [tetrominoPosition, setTetrominoPosition] = useState({ y: 0, x: getStartingPosition(currentTetromino, field) });
 
   const tetrominoPositionRef = useRef({ y: 0, x: 0 });
   tetrominoPositionRef.current = { ...tetrominoPosition };
@@ -141,14 +147,13 @@ const App: React.FC = () => {
           moveRight();
           break;
         case 'w':
-        case 'arrowup':
           moveUp();
           break;
         case 's':
         case 'arrowdown':
           moveDown();
           break;
-        case 'r':
+        case 'arrowup':
           rotateTetromino();
           break;
         case 'p':
