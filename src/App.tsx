@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import reactLogo from './assets/react.svg';
 import './App.css';
 import { PlayField } from './components/PlayField';
@@ -98,6 +98,9 @@ const App: React.FC = () => {
   const [currentTetrominoIndex, setCurrentTetrominoIndex] = useState(0);
   const [currentTetromino, setCurrentTetromino] = useState(tetrominoes[currentTetrominoIndex]);
 
+  const tetrominoPositionRef = useRef({ y: 0, x: 0 });
+  tetrominoPositionRef.current = { ...tetrominoPosition };
+
   const updateField = () => setFieldToPrint(printTetrominoOverField(currentTetromino, field, tetrominoPosition));
 
   const moveRight = () =>
@@ -116,7 +119,15 @@ const App: React.FC = () => {
   const nextTetromino = () => setCurrentTetrominoIndex((index) => (index < tetrominoes.length - 1 ? index + 1 : index));
   const prevTetromino = () => setCurrentTetrominoIndex((index) => (index > 0 ? index - 1 : index));
 
-  const rotateTetromino = () => setCurrentTetromino((tetromino) => rotateTetrominoState(tetromino));
+  const rotateTetromino = () => {
+    const { x, y } = tetrominoPositionRef.current;
+    const isRotateAllowed =
+      x + currentTetromino.state.length <= field[0].length && y + currentTetromino.state[0].length <= field.length;
+
+    if (isRotateAllowed) {
+      setCurrentTetromino((tetromino) => rotateTetrominoState(tetromino));
+    }
+  };
 
   const handleKeyPress = useCallback(
     (event: KeyboardEvent) => {
