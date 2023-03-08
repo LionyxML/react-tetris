@@ -17,6 +17,12 @@
   gap: 1rem;
 }
 
+.app-debug-area {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
 .logo {
   height: 1em;
   will-change: filter;

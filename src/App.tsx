@@ -17,6 +17,7 @@ type TetrominoPosition = {
   x: number;
   y: number;
 };
+type GameState = 'STOP' | 'PLAY' | 'PAUSE';
 
 const emptyCell: Cell = { isEmpty: true, color: 'inherit' };
 const emptyField: Field = Array.from(Array(20), () => new Array(10).fill(emptyCell));
@@ -94,18 +95,34 @@ const getNextTetromino = (): number => Math.floor(Math.random() * 7);
 
 const rotateTetrominoState = (tetromino: Tetromino) => ({ ...tetromino, state: transpose(reverse(tetromino.state)) });
 
-const getStartingPosition = (tetromino: Tetromino, field: Field): number =>
-  Math.floor((field[0].length - tetromino.state[0].length) / 2);
+const getStartingPosition = (tetromino: Tetromino, field: Field) => ({
+  y: 0,
+  x: Math.floor((field[0].length - tetromino.state[0].length) / 2),
+});
 
 const App: React.FC = () => {
   const [field] = useState(emptyField);
   const [fieldToPrint, setFieldToPrint] = useState(field);
   const [currentTetrominoIndex, setCurrentTetrominoIndex] = useState(getNextTetromino);
   const [currentTetromino, setCurrentTetromino] = useState(tetrominoes[currentTetrominoIndex]);
-  const [tetrominoPosition, setTetrominoPosition] = useState({ y: 0, x: getStartingPosition(currentTetromino, field) });
+  const [tetrominoPosition, setTetrominoPosition] = useState(getStartingPosition(currentTetromino, field));
+  const [move, setMove] = useState(0);
+  const [gameState, setGameState] = useState<GameState>('STOP');
+  const [speed, setSpeed] = useState(1000);
+
+  const setPlay = () => setGameState('PLAY');
+  const setStop = () => setGameState('STOP');
+  const setPause = () => setGameState('PAUSE');
+
+  const increaseSpeed = () => setSpeed((currentSpeed) => (currentSpeed += 1000));
+  const decreaseSpeed = () => setSpeed((currentSpeed) => (currentSpeed -= 1000));
 
   const tetrominoPositionRef = useRef({ y: 0, x: 0 });
   tetrominoPositionRef.current = { ...tetrominoPosition };
+
+  const resetField = () => {
+    setTetrominoPosition(getStartingPosition(tetrominoes[getNextTetromino()], emptyField));
+  };
 
   const updateField = () => setFieldToPrint(printTetrominoOverField(currentTetromino, field, tetrominoPosition));
 
@@ -181,6 +198,29 @@ const App: React.FC = () => {
     };
   }, [handleKeyPress]);
 
+  useEffect(() => {
+    const ticker = setInterval(() => {
+      if (gameState === 'PLAY') {
+        setMove((move) => move + 1);
+        moveDown();
+      }
+    }, 1000000 / speed);
+
+    if (gameState === 'STOP') {
+      setMove(0);
+      resetField();
+      console.log('game stopped');
+    }
+
+    if (gameState === 'PAUSE') {
+      //
+    }
+
+    return () => {
+      clearInterval(ticker);
+    };
+  }, [gameState, speed]);
+
   return (
     <div className="App">
       <div>
@@ -191,16 +231,31 @@ const App: React.FC = () => {
       </div>
       <div className="app-main">
         <PlayField data={fieldToPrint} />
-        <div>
+        <div className="app-debug-area">
           <p>Debug Controls:</p>
-          <button onClick={updateField}>R</button>
-          <button onClick={moveRight}>{'>'}</button>
-          <button onClick={moveLeft}>{'<'}</button>
-          <button onClick={moveUp}>{'^'}</button>
-          <button onClick={moveDown}>{'v'}</button>
-          <button onClick={prevTetromino}>{'Prev.'}</button>
-          <button onClick={nextTetromino}>{'Next.'}</button>
-          <button onClick={rotateTetromino}>{'Rot'}</button>
+          <div>
+            <button onClick={updateField}>R</button>
+            <button onClick={moveRight}>{'>'}</button>
+            <button onClick={moveLeft}>{'<'}</button>
+            <button onClick={moveUp}>{'^'}</button>
+            <button onClick={moveDown}>{'v'}</button>
+            <button onClick={prevTetromino}>{'Prev.'}</button>
+            <button onClick={nextTetromino}>{'Next.'}</button>
+            <button onClick={rotateTetromino}>{'Rot'}</button>
+          </div>
+          <div>Move: {move}</div>
+          <div>State: {gameState} </div>
+          <div>
+            <button onClick={setPlay}>Play</button>
+            <button onClick={setStop}>Stop</button>
+            <button onClick={setPause}>Pause</button>
+          </div>
+
+          <div>Speed: {speed} </div>
+          <div>
+            <button onClick={increaseSpeed}>+ Speed</button>
+            <button onClick={decreaseSpeed}>- Speed</button>
+          </div>
         </div>
       </div>
     </div>
