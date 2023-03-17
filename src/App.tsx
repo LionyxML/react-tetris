@@ -16,11 +16,40 @@ type Tetromino = {
 type TetrominoPosition = {
   x: number;
   y: number;
+  last?: {
+    x: number;
+    y: number;
+  };
 };
 type GameState = 'STOP' | 'PLAY' | 'PAUSE';
 
+const debugMode = true;
+
 const emptyCell: Cell = { isEmpty: true, color: 'inherit' };
-const emptyField: Field = Array.from(Array(20), () => new Array(10).fill(emptyCell));
+const initialField = (): Field => {
+  const emptyField = Array.from(Array(20), () => new Array(10).fill(emptyCell));
+
+  if (debugMode) {
+    emptyField[10][4] = {
+      isEmpty: false,
+      color: 'cyan',
+    };
+    emptyField[10][5] = {
+      isEmpty: false,
+      color: 'cyan',
+    };
+    emptyField[11][4] = {
+      isEmpty: false,
+      color: 'cyan',
+    };
+    emptyField[11][5] = {
+      isEmpty: false,
+      color: 'cyan',
+    };
+  }
+
+  return [...emptyField];
+};
 
 const I: Tetromino = { color: 'lightblue', state: [[1, 1, 1, 1]] };
 const J: Tetromino = {
@@ -68,15 +97,26 @@ const Z: Tetromino = {
 
 const tetrominoes = [I, J, L, O, S, T, Z];
 
-const printTetrominoOverField = (tetromino: Tetromino, field: Field, position: TetrominoPosition): Field => {
-  const { x: xPos, y: yPos } = position;
+const printTetrominoOverField = (
+  tetromino: Tetromino,
+  field: Field,
+  position: TetrominoPosition,
+): { field: Field; isMovementForbidden: boolean } => {
+  const { x: xPos, y: yPos, last } = clone(position);
   const newField = clone(field);
+  const lastField = clone(field);
+
+  let isMovementForbidden = false;
 
   for (let y = yPos; y <= yPos + tetromino.state.length - 1; y++) {
     for (let x = xPos; x <= xPos + tetromino.state[0].length - 1; x++) {
       const tetrominoX = x - xPos;
       const tetrominoY = y - yPos;
       const isCoordValid = tetrominoX >= 0 && tetrominoY >= 0;
+
+      if (!field[y][x].isEmpty && tetromino.state[tetrominoY][tetrominoX] === 1) {
+        isMovementForbidden = true;
+      }
 
       if (isCoordValid && tetromino.state[tetrominoY][tetrominoX] === 1) {
         newField[y][x] = {
@@ -87,7 +127,24 @@ const printTetrominoOverField = (tetromino: Tetromino, field: Field, position: T
     }
   }
 
-  return newField;
+  if (last && last.y && last.x) {
+    for (let y = last?.y; y <= last?.y + tetromino.state.length - 1; y++) {
+      for (let x = last?.x; x <= last?.x + tetromino.state[0].length - 1; x++) {
+        const tetrominoX = x - last?.x;
+        const tetrominoY = y - last?.y;
+        const isCoordValid = tetrominoX >= 0 && tetrominoY >= 0;
+
+        if (isCoordValid && tetromino.state[tetrominoY][tetrominoX] === 1) {
+          lastField[y][x] = {
+            isEmpty: false,
+            color: tetromino.color,
+          };
+        }
+      }
+    }
+  }
+
+  return { field: isMovementForbidden ? [...lastField] : [...newField], isMovementForbidden: isMovementForbidden };
 };
 
 // TODO: implement the actual algorithm here
@@ -101,7 +158,7 @@ const getStartingPosition = (tetromino: Tetromino, field: Field) => ({
 });
 
 const App: React.FC = () => {
-  const [field] = useState(emptyField);
+  const [field] = useState(initialField());
   const [fieldToPrint, setFieldToPrint] = useState(field);
   const [currentTetrominoIndex, setCurrentTetrominoIndex] = useState(getNextTetromino);
   const [currentTetromino, setCurrentTetromino] = useState(tetrominoes[currentTetrominoIndex]);
@@ -109,6 +166,7 @@ const App: React.FC = () => {
   const [move, setMove] = useState(0);
   const [gameState, setGameState] = useState<GameState>('STOP');
   const [speed, setSpeed] = useState(1000);
+  const [illegalMove, setIllegalMove] = useState(false);
 
   const setPlay = () => setGameState('PLAY');
   const setStop = () => setGameState('STOP');
@@ -120,24 +178,48 @@ const App: React.FC = () => {
   const tetrominoPositionRef = useRef({ y: 0, x: 0 });
   tetrominoPositionRef.current = { ...tetrominoPosition };
 
+  const illegalMoveRef = useRef(false);
+  illegalMoveRef.current = illegalMove;
+
   const resetField = () => {
-    setTetrominoPosition(getStartingPosition(tetrominoes[getNextTetromino()], emptyField));
+    setTetrominoPosition(getStartingPosition(tetrominoes[getNextTetromino()], initialField()));
   };
 
-  const updateField = () => setFieldToPrint(printTetrominoOverField(currentTetromino, field, tetrominoPosition));
+  const updateField = () => {
+    const newField = printTetrominoOverField(currentTetromino, field, tetrominoPosition).field;
+    const isForbidden = printTetrominoOverField(currentTetromino, field, tetrominoPosition).isMovementForbidden;
+
+    if (!isForbidden) {
+      setFieldToPrint(newField);
+      setIllegalMove(false);
+    } else {
+      setIllegalMove(true);
+    }
+  };
 
   const moveRight = () =>
+    !illegalMoveRef.current &&
     setTetrominoPosition((pos) => ({
       x: pos.x + currentTetromino.state[0].length <= field[0].length - 1 ? pos.x + 1 : pos.x,
       y: pos.y,
+      last: { ...pos },
     }));
-  const moveLeft = () => setTetrominoPosition((pos) => ({ x: pos.x > 0 ? pos.x - 1 : pos.x, y: pos.y }));
+
+  const moveLeft = () =>
+    !illegalMoveRef.current &&
+    setTetrominoPosition((pos) => ({ x: pos.x > 0 ? pos.x - 1 : pos.x, y: pos.y, last: { ...pos } }));
+
   const moveDown = () =>
+    !illegalMoveRef.current &&
     setTetrominoPosition((pos) => ({
       x: pos.x,
       y: pos.y + currentTetromino.state.length < field.length ? pos.y + 1 : pos.y,
+      last: { ...pos },
     }));
-  const moveUp = () => setTetrominoPosition((pos) => ({ x: pos.x, y: pos.y > 0 ? pos.y - 1 : pos.y }));
+
+  const moveUp = () =>
+    !illegalMoveRef.current &&
+    setTetrominoPosition((pos) => ({ x: pos.x, y: pos.y > 0 ? pos.y - 1 : pos.y, last: { ...pos } }));
 
   const nextTetromino = () => setCurrentTetrominoIndex((index) => (index < tetrominoes.length - 1 ? index + 1 : index));
   const prevTetromino = () => setCurrentTetrominoIndex((index) => (index > 0 ? index - 1 : index));
@@ -209,7 +291,6 @@ const App: React.FC = () => {
     if (gameState === 'STOP') {
       setMove(0);
       resetField();
-      console.log('game stopped');
     }
 
     if (gameState === 'PAUSE') {
@@ -245,6 +326,7 @@ const App: React.FC = () => {
           </div>
           <div>Move: {move}</div>
           <div>State: {gameState} </div>
+          <div>illegalMove: {String(illegalMove)}</div>
           <div>
             <button onClick={setPlay}>Play</button>
             <button onClick={setStop}>Stop</button>
